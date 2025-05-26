@@ -4,12 +4,14 @@ use actix_web::{web, App, HttpServer, HttpRequest};
 const SERVER_ADDR: &str = "127.0.0.1:8888";
 
 //Actix Webのメイン関数
+//asyncは非同期処理を行う関数
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     println!("[SERVER] http://{}/", SERVER_ADDR);
     //HTTPサーバー起動
     HttpServer::new(|| {
         //ルーティングを指定
+        //routeメソッドで適切に振り分けることでURLごとに処理を振り分けられる
         App::new()
         .route("/", web::get().to(index))
     })

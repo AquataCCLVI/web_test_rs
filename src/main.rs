@@ -8,6 +8,7 @@ struct FormData {
     weight: f64,
 }
 
+//getの場合はweb::Getにする
 async fn index(tmpl: web::Data<Tera>) -> Result<HttpResponse> {
     let rendered = tmpl
         .render("index.html", &Context::new())
@@ -15,7 +16,8 @@ async fn index(tmpl: web::Data<Tera>) -> Result<HttpResponse> {
     Ok(HttpResponse::Ok().content_type("text/html; charset=utf-8").body(rendered))
 }
 
-async fn calc(query: web::Query<FormData>, tmpl: web::Data<Tera>) -> Result<HttpResponse> {
+//postの場合はweb::Fromにする
+async fn calc(query: web::Form<FormData>, tmpl: web::Data<Tera>) -> Result<HttpResponse> {
     let h = query.height / 100.0;
     let bmi = query.weight / (h * h);
     let per = (bmi / 22.0) * 100.0;
@@ -35,11 +37,14 @@ async fn calc(query: web::Query<FormData>, tmpl: web::Data<Tera>) -> Result<Http
 async fn main() -> std::io::Result<()> {
     let tera = Tera::new("templates/**/*").expect("Template loading error");
 
+    println!("http://127.0.0.1:8888");
+
     HttpServer::new(move || {
         App::new()
             .app_data(web::Data::new(tera.clone()))
             .route("/", web::get().to(index))
-            .route("/calc", web::get().to(calc))
+            .route("/calc", web::post().to(calc))
+            //送信したいメソッドに合わせてpost,getを切り替える
     })
     .bind(("127.0.0.1", 8888))?
     .run()

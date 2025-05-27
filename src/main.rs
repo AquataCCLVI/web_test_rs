@@ -1,60 +1,47 @@
-use actix_web::{web, App, HttpServer, HttpRequest, HttpResponse,Error};
-use serde::{Deserialize, Serialize};
+use actix_web::{web, App, HttpResponse, HttpServer, Result};
+use serde::Deserialize;
+use tera::{Context, Tera};
 
-//アドレスとポートを指定
-const SERVER_ADDR: &str = "127.0.0.1:8888";
-
-//Actix Webのメイン関数
-//asyncは非同期処理を行う関数
-#[actix_web::main]
-async fn main() -> std::io::Result<()> {
-    println!("[SERVER] http://{}/", SERVER_ADDR);
-    //HTTPサーバー起動
-    HttpServer::new(|| {
-        //ルーティングを指定
-        //routeメソッドで適切に振り分けることでURLごとに処理を振り分けられる
-        App::new()
-        .route("/", web::get().to(index))
-        .route("/calc", web::get().to(calc))
-    })
-    .bind(SERVER_ADDR)?
-    .run()
-    .await
-}
-
-//"/"実行される関数
-async fn index(_:HttpRequest) -> Result<HttpResponse, Error> {
-    Ok (HttpResponse::Ok()
-        .content_type("text/html; charset=utf-8")
-        .body(format!("{}{}{}{}{}{}",
-            "<html><body><h1>BMI測定</h1>",
-            "<form action='calc'>",
-            "身長: <input name='height' value='160'><br>",
-            "体重: <input name='weight' value='70'><br>",
-            "<input type='submit' value='送信'>",
-            "</form></body></html>")))
-}
-
-//入力フォームの定義
-#[derive(Serialize, Deserialize, Debug)]
-pub struct FromBMI {
+#[derive(Deserialize)]
+struct FormData {
     height: f64,
     weight: f64,
 }
 
-//"/calc"にアクセスされたときに実行
-async fn calc(q: web::Query<FromBMI>) -> Result<HttpResponse, Error> {
-    //フォームからちゃんとパラメーターを受け取ったか確認
-    println!("{:?}", q);
-    //BMIを計算
-    let h = q.height / 100.0;
-    let bmi = q.weight / (h * h);
+async fn index(tmpl: web::Data<Tera>) -> Result<HttpResponse> {
+    let rendered = tmpl
+        .render("index.html", &Context::new())
+        .map_err(|_| actix_web::error::ErrorInternalServerError("Template error"))?;
+    Ok(HttpResponse::Ok().content_type("text/html; charset=utf-8").body(rendered))
+}
+
+async fn calc(query: web::Query<FormData>, tmpl: web::Data<Tera>) -> Result<HttpResponse> {
+    let h = query.height / 100.0;
+    let bmi = query.weight / (h * h);
     let per = (bmi / 22.0) * 100.0;
-    //結果を表示
-    Ok (HttpResponse::Ok()
-        .content_type("text/html; charset=utf-8")
-        .body(format!(
-            "<h3>BMI={:.1}, 乖離率={:.1}%</h3>", bmi, per)
-        )
-    )
+
+    let mut context = Context::new();
+    context.insert("bmi", &bmi);
+    context.insert("per", &per);
+
+    let rendered = tmpl
+        .render("result.html", &context)
+        .map_err(|_| actix_web::error::ErrorInternalServerError("Template error"))?;
+
+    Ok(HttpResponse::Ok().content_type("text/html; charset=utf-8").body(rendered))
+}
+
+#[actix_web::main]
+async fn main() -> std::io::Result<()> {
+    let tera = Tera::new("templates/**/*").expect("Template loading error");
+
+    HttpServer::new(move || {
+        App::new()
+            .app_data(web::Data::new(tera.clone()))
+            .route("/", web::get().to(index))
+            .route("/calc", web::get().to(calc))
+    })
+    .bind(("127.0.0.1", 8888))?
+    .run()
+    .await
 }

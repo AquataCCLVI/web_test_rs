@@ -6,6 +6,7 @@ use tera::{Context, Tera};
 struct FormData {
     height: f64,
     weight: f64,
+    text: String,
 }
 
 //getの場合はweb::Getにする
@@ -21,10 +22,12 @@ async fn calc(query: web::Form<FormData>, tmpl: web::Data<Tera>) -> Result<HttpR
     let h = query.height / 100.0;
     let bmi = query.weight / (h * h);
     let per = (bmi / 22.0) * 100.0;
+    let txt = query.text.clone();
 
     let mut context = Context::new();
     context.insert("bmi", &bmi);
     context.insert("per", &per);
+    context.insert("text", &txt);
 
     let rendered = tmpl
         .render("result.html", &context)

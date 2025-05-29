@@ -4,8 +4,8 @@
         <title>BMI結果</title>
     </head>
     <body>
-        <h3>BMI = {{ bmi | round(floor=1) }}</h3>
-        <p>乖離率 = {{ per | round(floor=1) }}</p>
+        <h3>BMI = {{ bmi }}</h3>
+        <p>乖離率 = {{ per }}</p>
         <p>コメント {{ text }}</p> <!-- htmlエスケープは自動 | safeをつけるとエスケープは無効になる -->
         <a href="/">戻る</a>
     </body>

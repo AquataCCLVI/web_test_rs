@@ -29,14 +29,17 @@ async fn calc(
     db_pool: web::Data<MySqlPool>,
 ) -> Result<HttpResponse> {
     let h = query.height / 100.0;
-    let bmi = query.weight / (h * h);
-    let per = (bmi / 22.0) * 100.0;
+    let bmi: f64 = query.weight / (h * h);
+    let per: f64 = (bmi / 22.0) * 100.0;
     let txt = query.text.clone();
+
+    let bmi_str = format!("{:.1}", bmi);
+    let per_str = format!("{:.1}", per);
 
     //result.htmlにわたすもの
     let mut context = Context::new();
-    context.insert("bmi", &bmi);
-    context.insert("per", &per);
+    context.insert("bmi", &bmi_str);
+    context.insert("per", &per_str);
     context.insert("text", &txt);
 
     //DBに登録
